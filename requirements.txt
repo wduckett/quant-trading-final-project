@@ -1,0 +1,35 @@
+
+# Dependencies from this file can be installed with the following command:
+# conda create --name env_name_here python=3.12
+# conda activate env_name_here
+# pip install -r requirements.txt
+
+# File generated with:
+# pip freeze > requirements.txt
+# platform: win-64
+
+arch
+colorama
+doit
+holidays
+ipython
+ipywidgets
+jupyter
+matplotlib
+myst-nb
+myst-parser
+notebook
+numpy
+pandas-datareader
+pandas
+plotly
+polars
+pytest
+python-decouple
+scikit-learn
+scipy
+seaborn
+sphinx
+statsmodels
+weightedstats
+wrds
