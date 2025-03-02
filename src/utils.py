@@ -24,22 +24,15 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 import inspect
 
-from ..settings import Config
+from settings import config
 
 
 # =============================================================================
 # Global Configuration
 # =============================================================================
 
-OUTPUT_DIR = Config.OUTPUT_DIR
-if OUTPUT_DIR is not None:
-    OUTPUT_DIR = Path(OUTPUT_DIR)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-RAW_DATA_DIR = Config.RAW_DATA_DIR
-if RAW_DATA_DIR is not None:
-    RAW_DATA_DIR = Path(RAW_DATA_DIR)
-    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+RAW_DATA_DIR = Path(config("RAW_DATA_DIR"))
+OUTPUT_DIR = Path(config("OUTPUT_DIR"))
 
 # =============================================================================
 # Manipulating DataFrames Utilities
