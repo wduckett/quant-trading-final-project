@@ -12,7 +12,7 @@ import shlex
 from os import environ, getcwd, path
 from pathlib import Path
 
-import settings
+from settings import config
 from colorama import Fore, Style, init
 
 # ====================================================================================
@@ -67,12 +67,12 @@ init(autoreset=True)
 # Configuration and Helpers for PyDoit
 # ====================================================================================
 
-BASE_DIR = Path(settings.BASE_DIR)
-DATA_DIR = Path(settings.DATA_DIR)
-RAW_DATA_DIR = Path(settings.RAW_DATA_DIR)
-MANUAL_DATA_DIR = Path(settings.MANUAL_DATA_DIR)
-OUTPUT_DIR = Path(settings.OUTPUT_DIR)
-USER = settings.USER
+BASE_DIR = Path(config("BASE_DIR"))
+DATA_DIR = Path(config("DATA_DIR"))
+RAW_DATA_DIR = Path(config("RAW_DATA_DIR"))
+MANUAL_DATA_DIR = Path(config("MANUAL_DATA_DIR"))
+OUTPUT_DIR = Path(config("OUTPUT_DIR"))
+USER = config("USER") 
 
 ## Helpers for handling Jupyter Notebook tasks
 # fmt: off
@@ -119,115 +119,19 @@ def task_config():
         "clean": [],
     }
 
-def task_pull_public_repo_data():
-    """Pull public data from FRED and OFR API"""
-
-    return {
-        "actions": [
-            "ipython ./src/settings.py",
-            "ipython ./src/pull_fred.py",
-            "ipython ./src/pull_ofr_api_data.py",
-        ],
-        "targets": [
-            RAW_DATA_DIR / "fred.parquet",
-            RAW_DATA_DIR / "ofr_public_repo_data.parquet",
-        ],
-        "file_dep": [
-            "./src/settings.py",
-            "./src/pull_fred.py",
-            "./src/pull_ofr_api_data.py",
-        ],
-        "clean": [],  # Don't clean these files by default. The ideas
-        # is that a data pull might be expensive, so we don't want to
-        # redo it unless we really mean it. So, when you run
-        # doit clean, all other tasks will have their targets
-        # cleaned and will thus be rerun the next time you call doit.
-        # But this one wont.
-        # Use doit forget --all to redo all tasks. Use doit clean
-        # to clean and forget the cheaper tasks.
-    }
-
-##############################$
-## Demo: Other misc. data pulls
-##############################$
-# def task_pull_other():
-#     """ """
-#     file_dep = [
-#         "./src/pull_bloomberg.py",
-#         "./src/pull_CRSP_Compustat.py",
-#         "./src/pull_CRSP_stock.py",
-#         "./src/pull_fed_yield_curve.py",
-#         ]
-#     file_output = [
-#         "bloomberg.parquet",
-#         "CRSP_Compustat.parquet",
-#         "CRSP_stock.parquet",
-#         "fed_yield_curve.parquet",
-#         ]
-#     targets = [RAW_DATA_DIR / file for file in file_output]
-
-#     return {
-#         "actions": [
-#             "ipython ./src/pull_bloomberg.py",
-#             "ipython ./src/pull_CRSP_Compustat.py",
-#             "ipython ./src/pull_CRSP_stock.py",
-#             "ipython ./src/pull_fed_yield_curve.py",
-#         ],
-#         "targets": targets,
-#         "file_dep": file_dep,
-#         "clean": [],  # Don't clean these files by default.
-#     }
-
-
-# def task_summary_stats():
-#     """ """
-#     file_dep = ["./src/example_table.py"]
-#     file_output = [
-#         "example_table.tex",
-#         "pandas_to_latex_simple_table1.tex",
-#     ]
-#     targets = [OUTPUT_DIR / file for file in file_output]
-
-#     return {
-#         "actions": [
-#             "ipython ./src/example_table.py",
-#             "ipython ./src/pandas_to_latex_demo.py",
-#         ],
-#         "targets": targets,
-#         "file_dep": file_dep,
-#         "clean": True,
-#     }
-
-
-# def task_example_plot():
-#     """Example plots"""
-
-#     return {
-#         "actions": [
-#             # "date 1>&2",
-#             # "time ipython ./src/example_plot.py",
-#             "ipython ./src/example_plot.py",
-#         ],
-#         "targets": [
-#             OUTPUT_DIR / "example_plot.png",
-#         ],
-#         "file_dep": [
-#             "./src/example_plot.py",
-#             "./src/pull_fred.py",
-#         ],
-#         "clean": True,
-#     }
-
 
 notebook_tasks = {
-    # "01_example_notebook_interactive.ipynb": {
-    #     "file_dep": [],
-    #     "targets": [
-    #         Path("./docs") / "01_example_notebook_interactive.html",
+    "01_get_data_example.ipynb": {
+        "file_dep": ["./src/pull_taq.py",
+                   "./src/transform_taq.py",],
+        "targets": [
+            Path("./docs") / "01_get_data_example.html",
+        ],
+    },
+    # "02_sign_trading.ipynb": {
+    #     "file_dep": ["./src/pull_taq.py"
+    #                "./src/pull_fred.py",
     #     ],
-    # },
-    # "02_example_with_dependencies.ipynb": {
-    #     "file_dep": ["./src/pull_fred.py"],
     #     "targets": [
     #         Path(OUTPUT_DIR) / "GDP_graph.png",
     #         Path("./docs") / "02_example_with_dependencies.html",

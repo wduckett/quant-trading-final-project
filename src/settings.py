@@ -102,8 +102,6 @@ def create_dirs():
     d["PROCESSED_DATA_DIR"].mkdir(parents=True, exist_ok=True)
     d["MANUAL_DATA_DIR"].mkdir(parents=True, exist_ok=True)
     d["OUTPUT_DIR"].mkdir(parents=True, exist_ok=True)
-    #d["PUBLISH_DIR.mkdir(parents=True, exist_ok=True)
-    d["LOG_DIR"].mkdir(parents=True, exist_ok=True)
 
 if __name__ == "__main__":
     create_dirs()

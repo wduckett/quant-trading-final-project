@@ -13,7 +13,6 @@ from typing import Union, List, Dict, Any, Optional
 
 import datetime
 import pytz
-import logging
 import re
 import zipfile
 import hashlib
@@ -203,7 +202,6 @@ def _save_figure(
             output_dir = Path.cwd()  # Fallback to current working directory if the caller module is unknown
     plot_path = output_dir / filename
     fig.savefig(plot_path, dpi=dpi, bbox_inches='tight')
-    #logging.info(f"Plot saved to {plot_path}")
 
 
 def _cache_filename(
@@ -261,7 +259,7 @@ def _hash_cache_filename(
     returning up to three paths: .csv, .parquet, and .zip.
     """
     # Simplify filter string
-    if "date" not in filters_str:
+    if "date" not in filters_str and "end_date" not in filters_str:
         today_str = datetime.datetime.today().strftime('%Y%m%d')
         filters_str += f"_{today_str}"
 
@@ -339,15 +337,12 @@ def _read_cached_data(filepath: Path) -> pd.DataFrame:
     fmt = filepath.suffix.lstrip(".")
 
     if fmt == "csv":
-        #logging.info(f"Reading cached data from {filepath}")
         return pd.read_csv(filepath)
 
     elif fmt == "parquet":
-        #logging.info(f"Reading cached data from {filepath}")
         return pd.read_parquet(filepath)
 
     elif fmt == "zip":
-        #logging.info(f"Reading cached data from {filepath}")
         with zipfile.ZipFile(filepath, 'r') as z:
             file_name = z.namelist()[0]  # Assume only one file in the zip
             with z.open(file_name) as f:
@@ -383,5 +378,4 @@ def write_cache_data(df: pd.DataFrame, filepath: Path, fmt: str = 'csv') -> None
         df.to_parquet(filepath, index=False)
     else:
         df.to_csv(filepath, index=False)
-    logging.info(f"Data cached to {filepath}")
 

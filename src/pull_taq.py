@@ -38,13 +38,13 @@ Similarly for WCT data:
 """
 
 import datetime
-import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Union, List, Any, Dict
 
 import pandas as pd
 import polars as pl
+import pytz
 import wrds
 
 # Local imports - adjust to your package structure
@@ -309,7 +309,6 @@ def _get_taq_nbbo_cached(
                 AND time_m > '09:30:00' 
                 AND time_m < '16:00:00'
         """
-    logging.info(f"[get_taq_nbbo] Running SQL for date={date_str}, tickers={tickers} ...")
 
     # Query WRDS
     db = wrds.Connection(wrds_username=wrds_username)
@@ -362,8 +361,7 @@ def _get_taq_wct_cached(
     use_polars: bool = False,
     wrds_username: str = WRDS_USERNAME,
     hash_file_name: bool = False,
-    data_dir: Union[None, Path] = RAW_DATA_DIR,
-    do_transform: bool = True
+    data_dir: Union[None, Path] = RAW_DATA_DIR
 ) -> Union[pd.DataFrame, pl.DataFrame]:
     """
     Retrieve intraday WCT data from TAQ for the given date and tickers.
@@ -446,7 +444,6 @@ def _get_taq_wct_cached(
             AND time_m > '09:30:00'
             AND time_m < '16:00:00'
     """
-    logging.info(f"[get_taq_wct] Running SQL for date={date_str}, tickers={tickers} ...")
 
     # Query WRDS
     db = wrds.Connection(wrds_username=wrds_username)
