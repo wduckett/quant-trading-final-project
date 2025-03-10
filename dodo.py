@@ -128,15 +128,16 @@ notebook_tasks = {
             Path("./docs") / "01_get_data_example.html",
         ],
     },
-    # "02_sign_trading.ipynb": {
-    #     "file_dep": ["./src/pull_taq.py"
-    #                "./src/pull_fred.py",
-    #     ],
-    #     "targets": [
+    "03_sign_trading_project.ipynb.ipynb": {
+        "file_dep": ["./src/pull_taq.py"
+                     "./src/transform_taq.py",
+                     "./src/strategy.py",
+        ],
+        "targets": [
     #         Path(OUTPUT_DIR) / "GDP_graph.png",
     #         Path("./docs") / "02_example_with_dependencies.html",
-    #     ],
-    # },
+        ],
+    },
 }
 
 
