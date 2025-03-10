@@ -54,77 +54,16 @@ from utils import (
     _hash_cache_filename,
     _file_cached,
     _read_cached_data,
-    write_cache_data,
-    _flatten_dict_to_str
+    _flatten_dict_to_str,
+    _write_cache_data,
+    _tickers_to_tuple,
+    _format_tuple_for_sql_list,
 )
+from transform_taq import transform_nbbo, transform_taq_wct
 
 
 RAW_DATA_DIR = Path(config("RAW_DATA_DIR"))
 WRDS_USERNAME = Path(config("WRDS_USERNAME"))
-
-
-# --------------------------------------------------------------------------
-#  Helper Functions
-# --------------------------------------------------------------------------
-
-def format_tickers_for_sql(tickers: tuple) -> str:
-    """
-    Convert a tuple of tickers into a properly formatted SQL list.
-    """
-    tickers_list = ", ".join(f"'{ticker}'" for ticker in tickers)
-    return f"({tickers_list})"
-
-
-def transform_datetime(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The raw DataFrame from get_taq_nbbo().
-
-    Returns
-    -------
-    pd.DataFrame
-        The transformed data with new timestamp columns.
-    """
-    
-    if isinstance(df, pl.DataFrame):
-        is_polars = True
-        df = df.to_pandas()
-    else:
-        is_polars = False
-    
-    if df.empty or 'time_m_nano' not in df.columns:
-        return df
-    
-    df["date"] = pd.to_datetime(df["date"]).dt.date
-    df["time_m"] = pd.to_datetime(df["time_m"]).dt.time
-
-    def _make_timestamp(row):
-        # Combine 'date' and the 'time_m' column (a time)
-        t = datetime.datetime.combine(row["date"], row["time_m"])
-        # Convert to tz-aware + add nanoseconds
-        pdt = (
-            pd.to_datetime(t)
-            .tz_localize(pytz.timezone('America/New_York'))
-            + pd.Timedelta(row["time_m_nano"], unit="ns")
-        )
-        return pdt
-
-    df["time_m"] = df.apply(_make_timestamp, axis=1)
-    del df["time_m_nano"]  # remove the old nanosec column
-
-    if "window_time" in df.columns:
-        df = df.rename(columns={"time_m": "time_of_last_quote"})
-        df["window_time"] = (
-            pd.to_datetime(df["window_time"])
-            .dt.tz_localize(pytz.timezone('America/New_York'))
-        )
-    else:
-        df = df.rename(columns={"time_m": "time_quote"})
-    if is_polars:
-        df = pl.from_pandas(df)
-    return df
 
 
 # --------------------------------------------------------------------------
@@ -141,17 +80,10 @@ def get_taq_nbbo(
     hash_file_name: bool = False,
     data_dir: Union[None, Path] = RAW_DATA_DIR
 ) -> Union[pd.DataFrame, pl.DataFrame]:
-    # Convert tickers to a tuple if not already one.
-    if isinstance(tickers, str):
-        tickers_tuple = (tickers,)
-    elif isinstance(tickers, list):
-        tickers_tuple = tuple(tickers)
-    else:
-        tickers_tuple = tickers
 
     # Call the cached function with the hashable tickers tuple.
     return _get_taq_nbbo_cached(
-        tickers_tuple,
+        tickers,
         date,
         use_bars,
         bar_minutes,
@@ -160,6 +92,7 @@ def get_taq_nbbo(
         hash_file_name,
         data_dir
     )
+
 
 
 @lru_cache(maxsize=None)
@@ -221,13 +154,16 @@ def _get_taq_nbbo_cached(
     date_str = date_dt.strftime('%Y%m%d')
     year_str = date_dt.strftime('%Y')
 
+    # Convert tickers to a tuple if not already one.
+    tickers_tuple = _tickers_to_tuple(tickers)
+
     # Ensure bar_minutes is valid
     assert bar_minutes == 60 or (bar_minutes <= 30 and 30 % bar_minutes == 0), \
         "bar_minutes must be 60 or a divisor of 30"
 
     # Build a filter string for caching
     filters: Dict[str, Any] = {
-        "tickers": tickers,
+        "tickers": tickers_tuple,
         "date": date_str
     }
     if use_bars:
@@ -237,9 +173,9 @@ def _get_taq_nbbo_cached(
 
     # Check file cache
     if hash_file_name:
-        cache_paths = _hash_cache_filename("taq_nbbo_bars", filter_str, data_dir)
+        cache_paths = _hash_cache_filename("taq_nbbo", filter_str, data_dir)
     else:
-        cache_paths = _cache_filename("taq_nbbo_bars", filter_str, data_dir)
+        cache_paths = _cache_filename("taq_nbbo", filter_str, data_dir)
 
     cached_fp = _file_cached(cache_paths)
     if cached_fp:
@@ -249,7 +185,7 @@ def _get_taq_nbbo_cached(
     # Build SQL
     # Example table: taqm_{year_str}.complete_nbbo_{date_str}
     # Adjust "db" usage if you have a global wrds.Connection or create a new one.
-    ticker_filter = format_tickers_for_sql(tickers)
+    ticker_filter = _format_tuple_for_sql_list(tickers_tuple)
     if use_bars:
         sql = f"""
             WITH windowable_nbbo AS (
@@ -317,11 +253,10 @@ def _get_taq_nbbo_cached(
 
     # Write to cache if not empty
     if not df.empty:
-        csv_path = next((p for p in cache_paths if p.suffix == ".csv"), None)
-        if csv_path:
-            write_cache_data(df, csv_path, fmt="csv")
-
-    df = transform_datetime(df)
+        df = transform_nbbo(df)
+        file_path = next((p for p in cache_paths if p.suffix == ".parquet"), None)
+        if file_path:
+            _write_cache_data(df, file_path)
 
     return pl.from_pandas(df) if use_polars else df
 
@@ -339,15 +274,9 @@ def get_taq_wct(
     data_dir: Union[None, Path] = RAW_DATA_DIR
 ) -> Union[pd.DataFrame, pl.DataFrame]:
     # Convert tickers to a tuple if not already one.
-    if isinstance(tickers, str):
-        tickers_tuple = (tickers,)
-    elif isinstance(tickers, list):
-        tickers_tuple = tuple(tickers)
-    else:
-        tickers_tuple = tickers
-
+    
     return _get_taq_wct_cached(
-        tickers_tuple,
+        tickers,
         date,
         use_polars,
         wrds_username,
@@ -409,9 +338,12 @@ def _get_taq_wct_cached(
     date_str = date_dt.strftime('%Y%m%d')
     year_str = date_dt.strftime('%Y')
 
+    # Convert tickers to a tuple if not already one.
+    tickers_tuple = _tickers_to_tuple(tickers)
+
     # Build a filter string for caching
     filters: Dict[str, Any] = {
-        "tickers": tickers,
+        "tickers": tickers_tuple,
         "date": date_str
     }
 
@@ -429,20 +361,20 @@ def _get_taq_wct_cached(
         return pl.from_pandas(df_cached) if use_polars else df_cached
 
     # Build SQL for WCT data. Adjust table and column names as needed.
-    ticker_filter = format_tickers_for_sql(tickers)
+    ticker_filter = _format_tuple_for_sql_list(tickers_tuple)
     sql = f"""
         SELECT
             sym_root AS ticker,
             date,
             time_m,
             price,
-            size,
-            tr_corr AS trade_correction
+            size
         FROM taqm_{year_str}.ctm_{date_str}
         WHERE
             sym_root IN {ticker_filter}
             AND time_m > '09:30:00'
             AND time_m < '16:00:00'
+            AND tr_corr IN ('00', '01', '02') -- Exclude non-regular trades
     """
 
     # Query WRDS
@@ -452,10 +384,9 @@ def _get_taq_wct_cached(
 
     # Write to cache if not empty
     if not df.empty:
-        csv_path = next((p for p in cache_paths if p.suffix == ".csv"), None)
-        if csv_path:
-            write_cache_data(df, csv_path, fmt="csv")
-
-    df = transform_datetime(df)
+        df = transform_taq_wct(df)
+        file_path = next((p for p in cache_paths if p.suffix == ".parquet"), None)
+        if file_path:
+            _write_cache_data(df, file_path)
 
     return pl.from_pandas(df) if use_polars else df
