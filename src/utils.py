@@ -370,12 +370,40 @@ def _flatten_dict_to_str(d: Dict[str, Any]) -> str:
             items.append(f"{k}={v}")
     return ",".join(items)
 
-def write_cache_data(df: pd.DataFrame, filepath: Path, fmt: str = 'csv') -> None:
+
+def _write_cache_data(df: pd.DataFrame, filepath: Path) -> None:
     """
     Write a DataFrame to file for caching.
     """
+    # Get file extension from filepath:
+    fmt = filepath.suffix.lstrip(".")
     if fmt == "parquet":
         df.to_parquet(filepath, index=False)
-    else:
+    elif fmt =="csv":
         df.to_csv(filepath, index=False)
+    elif fmt == "xlsx":
+        df.to_excel(filepath, index=False)
+    else:
+        raise ValueError(f"Unsupported file format: {fmt}")
 
+
+def _tickers_to_tuple(tickers: Union[str, List[str]]) ->  tuple:
+    if tickers is None:
+        return None
+    if isinstance(tickers, str):
+        tickers_tuple = (tickers,)
+    elif isinstance(tickers, list):
+        tickers_tuple = tuple(tickers)
+    else:
+        tickers_tuple = tickers
+    return tickers_tuple
+
+def _format_tuple_for_sql_list(tickers: tuple) -> str:
+    """
+    Convert a tuple of tickers into a properly formatted SQL list.
+    """
+    if len(tickers) == 1:
+        return f"('{tickers[0]}')"
+    else:
+        tickers_list = ", ".join(f"'{ticker}'" for ticker in tickers)
+    return f"({tickers_list})"
