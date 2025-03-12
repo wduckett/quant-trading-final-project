@@ -533,12 +533,11 @@ def calc_order_imbalance_and_vpin(
 
 
 # ------------------------------------------------------------------------------
-# Finally, our main “driver” function that calls each subfunction in sequence:
+# Main transformation function that calls each subfunction in sequence:
 # ------------------------------------------------------------------------------
-def extract_features(
+def extract_features_taq(
     original_df: pd.DataFrame,
     half_life_s: float = 20.0,
-    realized_vol_window: str = "1s",
     spread_window: str = "1s",
     flow_time_step: str = "100ms",
     flow_window: str = "1s",

@@ -72,6 +72,7 @@ DATA_DIR = Path(config("DATA_DIR"))
 RAW_DATA_DIR = Path(config("RAW_DATA_DIR"))
 MANUAL_DATA_DIR = Path(config("MANUAL_DATA_DIR"))
 OUTPUT_DIR = Path(config("OUTPUT_DIR"))
+PROCESSED_DATA_DIR = Path(config("PROCESSED_DATA_DIR"))
 USER = config("USER") 
 
 ## Helpers for handling Jupyter Notebook tasks
@@ -128,14 +129,13 @@ notebook_tasks = {
             Path("./docs") / "01_get_data_example.html",
         ],
     },
-    "03_sign_trading_project.ipynb.ipynb": {
+    "03_sign_trading_project.ipynb": {
         "file_dep": ["./src/pull_taq.py"
                      "./src/transform_taq.py",
                      "./src/strategy.py",
         ],
         "targets": [
-    #         Path(OUTPUT_DIR) / "GDP_graph.png",
-    #         Path("./docs") / "02_example_with_dependencies.html",
+             Path(PROCESSED_DATA_DIR) / "merged_trades.csv",
         ],
     },
 }

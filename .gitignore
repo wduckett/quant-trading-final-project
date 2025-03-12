@@ -21,6 +21,7 @@
 temp*.csv
 */_build/
 drafts/draft_bp.pdf
+**/cache/
 
 # venv virtual environment folder
 /venv/*
