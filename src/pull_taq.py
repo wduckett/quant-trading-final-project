@@ -61,10 +61,13 @@ from utils import (
 )
 from transform_taq import transform_nbbo, transform_taq_wct
 
+# =============================================================================
+# Global Configuration
+# =============================================================================
 
 RAW_DATA_DIR = Path(config("RAW_DATA_DIR"))
+RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 WRDS_USERNAME = Path(config("WRDS_USERNAME"))
-
 
 # --------------------------------------------------------------------------
 #  NBBO Data Function

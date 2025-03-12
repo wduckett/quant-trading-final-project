@@ -607,7 +607,7 @@ def extract_features(
                                        rolling_buckets_for_vpin=vpin_buckets)
 
     df = df[[
-        "time_trade", "price", "mid_price", "owa_price", 
+        "time_trade", "best_bid", "best_ask", "price", "mid_price", "owa_price", 
         "ewma_price_return", "ewma_mid_price_return", "ewma_owa_price_return",
         "past_vwap", "future_vwap","trade_sign", "duration_since_last_trade", 
         "size_imbalance", "market_pressure", "OFI", "trade_flow", 
