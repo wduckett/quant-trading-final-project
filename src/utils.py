@@ -31,7 +31,9 @@ from settings import config
 # =============================================================================
 
 RAW_DATA_DIR = Path(config("RAW_DATA_DIR"))
+RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR = Path(config("OUTPUT_DIR"))
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
 # Manipulating DataFrames Utilities

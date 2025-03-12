@@ -533,12 +533,11 @@ def calc_order_imbalance_and_vpin(
 
 
 # ------------------------------------------------------------------------------
-# Finally, our main “driver” function that calls each subfunction in sequence:
+# Main transformation function that calls each subfunction in sequence:
 # ------------------------------------------------------------------------------
-def extract_features(
+def extract_features_taq(
     original_df: pd.DataFrame,
     half_life_s: float = 20.0,
-    realized_vol_window: str = "1s",
     spread_window: str = "1s",
     flow_time_step: str = "100ms",
     flow_window: str = "1s",
@@ -607,7 +606,7 @@ def extract_features(
                                        rolling_buckets_for_vpin=vpin_buckets)
 
     df = df[[
-        "time_trade", "price", "mid_price", "owa_price", 
+        "time_trade", "best_bid", "best_ask", "price", "mid_price", "owa_price", 
         "ewma_price_return", "ewma_mid_price_return", "ewma_owa_price_return",
         "past_vwap", "future_vwap","trade_sign", "duration_since_last_trade", 
         "size_imbalance", "market_pressure", "OFI", "trade_flow", 

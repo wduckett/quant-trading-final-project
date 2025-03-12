@@ -63,9 +63,9 @@ d["USER"] = _config("USER", default="")
 
 ## Paths
 d["DATA_DIR"] = if_relative_make_abs(_config('DATA_DIR', default=Path('_data'), cast=Path))
-d["RAW_DATA_DIR"] = Path(d["DATA_DIR"] / "raw")
-d["PROCESSED_DATA_DIR"] = Path(d["DATA_DIR"] / "processed")
-d["MANUAL_DATA_DIR"] = Path(d["DATA_DIR"] / "manual")
+d["RAW_DATA_DIR"] = if_relative_make_abs(_config('RAW_DATA_DIR', default=Path(d["DATA_DIR"] / "raw"), cast=Path))
+d["PROCESSED_DATA_DIR"] = if_relative_make_abs(_config('PROCESSED_DATA_DIR', default=Path('data/processed'), cast=Path))
+d["MANUAL_DATA_DIR"] = if_relative_make_abs(_config('MANUAL_DATA_DIR', default=Path('data/manual'), cast=Path))
 d["LOG_DIR"] = if_relative_make_abs(_config('LOG_DIR', default=Path('logs'), cast=Path))
 d["OUTPUT_DIR"] = if_relative_make_abs(_config('OUTPUT_DIR', default=Path('_output'), cast=Path))
 d["PUBLISH_DIR"] = if_relative_make_abs(_config('PUBLISH_DIR', default=Path('docs'), cast=Path))
