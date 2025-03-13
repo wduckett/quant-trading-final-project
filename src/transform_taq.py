@@ -263,10 +263,10 @@ def calc_ewma_price_returns(
     arr_owa      = df[owa_price_col].values
 
     # Initialize EWMA arrays
-    ewma_price_vals = np.zeros(len(df), dtype=float)
-    ewma_mid_vals   = np.zeros(len(df), dtype=float)
-    ewma_owa_vals   = np.zeros(len(df), dtype=float)
-
+    ewma_price_vals = np.zeros(len(df))
+    ewma_mid_vals   = np.zeros(len(df))
+    ewma_owa_vals   = np.zeros(len(df))
+    print(df)
     # Start them off with the first row's value
     ewma_price_vals[0] = arr_price[0]
     ewma_mid_vals[0]   = arr_mid[0]

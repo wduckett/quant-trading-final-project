@@ -147,34 +147,35 @@ def train_ml_model_pipeline(
     model : Pipeline
         The best estimator pipeline (including preprocessing and RF) after RandomizedSearchCV.
     """
-
-    df = data.copy().dropna(subset=[label_col])
+    print("state 0")
+    df = data.copy().dropna()
     # Separate target from features
     y = df[label_col].astype(int)
     X = df.drop(columns=[label_col])
-    
+    print("state 1")
     # List out columns that need or do not need scaling
     if non_scaling_cols is None:
         # discrete sign signals or z-scores
         non_scaling_cols = ["trade_sign", "spread_Zscore"]
-    
+    print("state 2")
     if "spread_Zscore" in X.columns:
         X["spread_Zscore"] = X["spread_Zscore"].astype("float")
-
+    print("state 3")
     # Basic train/test split by time
     total_size = len(X)
+    print(total_size, len(y))
     train_cutoff = int(train_size * total_size)
 
     X_train_full, X_test = X.iloc[:train_cutoff], X.iloc[train_cutoff:]
     y_train_full, y_test = y.iloc[:train_cutoff], y.iloc[train_cutoff:]
-
+    print("state 4")
     # Identify numeric columns
     numeric_cols = [c for c in X_train_full.columns 
                     if pd.api.types.is_numeric_dtype(X_train_full[c])]
 
     # The columns to scale are numeric but not in the non_scaling_cols
     scaling_cols = [c for c in numeric_cols if c not in non_scaling_cols]
-
+    print("state 6")
     # Build column transformer
     transformers = []
     if len(scaling_cols) > 0:
@@ -184,23 +185,23 @@ def train_ml_model_pipeline(
     transformers.append(("passthrough", "passthrough", non_scaling_cols))
 
     preprocessor = ColumnTransformer(transformers=transformers)
-
+    print("state 7")
     # If want PCA, Chain PCA in the pipeline after scaling
     pipeline_steps = [("preprocessor", preprocessor)]
     if use_pca:
-        pipeline_steps.append(("pca", PCA(n_components=pca_components, random_state=random_state)))
-
+        pipeline_steps.append(("pca", PCA(n_components=pca_components, svd_solver='full', random_state=random_state)))
+    print("state 8")
     # Add Random Forest as final step, uses parallel processing
     pipeline_steps.append(("rf", RandomForestClassifier(n_jobs=-1, random_state=random_state, class_weight="balanced")))
-    
+    print("state 9")
     # Uses joblib.Memory to cache the transformers and the classifier to avoid redundant computation
     pipeline = Pipeline(steps=pipeline_steps, memory=memory)
-
+    print("state 10")
     # TimeSeriesSplit for cross-validation to test on different time periods, avoiding overfitting.
     validation_set_size = len(X_test)  # size of the test/validation set
     fold_size = max(1, validation_set_size // 5) # Choose a reasonable validation fold size (~20% of validation set)
     n_splits = max(2, (train_cutoff // fold_size)) # Determine the number of splits dynamically based on the training set size
-
+    print("state 11")
     tscv = TimeSeriesSplit(n_splits=n_splits) # Create TimeSeriesSplit object with calculated splits
 
     # Hyperparameter search space
@@ -209,7 +210,7 @@ def train_ml_model_pipeline(
         'rf__max_depth': [4, 8, 16],
         'rf__min_samples_split': [10, 50, 100]
     }
-
+    print("state 12")
     grid_search = RandomizedSearchCV(
         pipeline,
         param_distributions=param_grid,
@@ -219,10 +220,34 @@ def train_ml_model_pipeline(
         random_state=random_state,
         verbose=1
     )
-
+    print("state 13")
+    print(len(X_train_full))
+    print(len(y_train_full))
+    print(":3 0")
+    na_indices = set()
+    for idx, row in X_train_full.iterrows():
+        if any(row.isna()):
+            na_indices.add(idx)
+    print(":3 1")
+    for idx, val in enumerate(y_train_full):
+        if np.isnan(val):
+            na_indices.add(idx)
+    print(":3 2")
+    na_indices = list(na_indices)
+    print(len(na_indices))
+    print(sum(X_train_full.isna().values.ravel()))
+    print(y_train_full.isna().sum())
+    X_train_full.drop(na_indices, axis=0, inplace=True)
+    y_train_full.drop(na_indices, axis=0, inplace=True)
+    print(":3 3")
+    print(sum(X_train_full.isna().values.ravel()))
+    print(y_train_full.isna().sum())
+    print(":3 4")
+    print(len(X_train_full))
+    print(len(y_train_full))
     grid_search.fit(X_train_full, y_train_full)
     model = grid_search.best_estimator_
-
+    print("state 14")
     # Final evaluation on the holdout test set
     y_train_pred = model.predict(X_train_full)
     y_test_pred = model.predict(X_test)
@@ -259,6 +284,7 @@ def signal_to_returns(
     lookahead_timedelta: pd.Timedelta = pd.Timedelta("1ms"),
     up_weight: float = 1.0,
     down_weight: float = 1.0,
+    trade_style: str = "swing",
     transaction_cost: float = 0.0001 # 1bp per trade
 ) -> pd.DataFrame:
     """
@@ -287,6 +313,8 @@ def signal_to_returns(
         Multiplier for the +1 signals
     down_weight : float
         Multiplier for the -1 signals
+    trade_style : str
+        When to trade. "swing" is for swinging between long and short
     transaction_cost : float
         Transaction cost per trade (e.g. 1bp = 0.0001)
 
@@ -295,11 +323,14 @@ def signal_to_returns(
     strategy_returns : pd.DataFrame
         Series (or DataFrame) of strategy returns.
     """
-
     best_prices = best_prices.copy()
     sig = signals.copy()
 
-    # Ensure signalsis a DataFrames
+    if trade_style not in ["swing"]:
+        print("Unrecognized trade style. Using default behavior (swing).")
+        trade_style = "swing"
+
+    # Ensure signals is a DataFrame
     if isinstance(sig, pd.Series):
         sig = sig.to_frame()
     # We'll just rename the first column to 'signal'
@@ -336,11 +367,48 @@ def signal_to_returns(
     #  -1  -> -down_weight
     merged["weighted_signal"] = merged[col_signal].map({1: up_weight, 0: 0, -1: -down_weight})
 
+    if trade_style == "swing":
+        if up_weight == -down_weight:
+            print("Strategy does the same thing on up and down signals. Results will be meaningless. Terminating.")
+            assert(False)
+        elif up_weight == 0:
+            print("Warning: up weight being changed to 1e-8")
+            up_weight = 1e-8
+        elif down_weight == 0:
+            print("Warning: down weight being changed to 1e-8")
+            down_weight = 1e-8
+        
+        drop_rows = []
+        if merged["weighted_signal"].iloc[0] == up_weight:
+            last = up_weight
+        elif merged["weighted_signal"].iloc[0] == -down_weight:
+            last = -down_weight
+        else:
+            drop_rows.append(signals.index[0])
+            if merged["weighted_signal"].iloc[1] == up_weight:
+                last = up_weight
+            elif merged["weighted_signal"].iloc[1] == -down_weight:
+                last = -down_weight
+            else:
+                print("Ensure signals df is filtered to alternate signals.")
+                assert(False)
+        
+        for i in range(2, len(merged)):
+            if last == up_weight:
+                if merged["weighted_signal"].iloc[i] == -down_weight:
+                    last = -down_weight
+                else:
+                    drop_rows.append(signals.index[i])
+            else:
+                if merged["weighted_signal"].iloc[i] == up_weight:
+                    last = up_weight
+                else:
+                    drop_rows.append(signals.index[i])
+
+        merged.drop(index=drop_rows, inplace=True)
+
     # Get previous weighted position (defaulting to 0 for the first observation)
     merged["prev_weighted_signal"] = merged["weighted_signal"].shift(1).fillna(0)
-
-    # Only trade when the signal changes
-    merged = merged[merged['weighted_signal'] != merged['prev_weighted_signal']]
 
     # Trade size is the change in weighted position
     merged["trade_size"] = merged["weighted_signal"] - merged["prev_weighted_signal"]
@@ -365,5 +433,5 @@ def signal_to_returns(
     # Optionally, rename the strategy return column
     merged.rename(columns={"strategy_return": f"{strategy_name}_returns"}, inplace=True)
 
-    return merged[[f"{strategy_name}_returns"]]
+    return merged
 
