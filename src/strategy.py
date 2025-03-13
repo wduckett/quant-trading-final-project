@@ -339,6 +339,9 @@ def signal_to_returns(
     # Get previous weighted position (defaulting to 0 for the first observation)
     merged["prev_weighted_signal"] = merged["weighted_signal"].shift(1).fillna(0)
 
+    # Only trade when the signal changes
+    merged = merged[merged['weighted_signal'] != merged['prev_weighted_signal']]
+
     # Trade size is the change in weighted position
     merged["trade_size"] = merged["weighted_signal"] - merged["prev_weighted_signal"]
 
