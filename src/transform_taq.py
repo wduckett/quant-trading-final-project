@@ -266,7 +266,7 @@ def calc_ewma_price_returns(
     ewma_price_vals = np.zeros(len(df))
     ewma_mid_vals   = np.zeros(len(df))
     ewma_owa_vals   = np.zeros(len(df))
-    print(df)
+
     # Start them off with the first row's value
     ewma_price_vals[0] = arr_price[0]
     ewma_mid_vals[0]   = arr_mid[0]
